@@ -1,0 +1,19 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environment
+var/
+venv/
+
+# Data (ignore complete dataset)
+data/
+*.avi
+*.mp4
+
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
