@@ -1,11 +1,6 @@
-opencv-contrib-python
-pandas
-matplotlib
-scikit-learn
-tqdm
-huggingface_hub
-streamlit>=1.28.0
-numpy
+streamlit>=1.28,<1.55
+numpy<2
 opencv-python
 tensorflow==2.13.0
+huggingface-hub
 protobuf<=3.20.3
