@@ -5,7 +5,8 @@ from src.dataset import extract_frames
 
 MODEL_PATH = "models/action_recognition_final.keras"
 
-model = tf.keras.models.load_model(MODEL_PATH)
+model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+
 
 ID2LABEL = {
     0: "CricketShot",
