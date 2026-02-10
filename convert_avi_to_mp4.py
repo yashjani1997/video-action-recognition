@@ -1,8 +1,8 @@
 import cv2
 import os
 
-input_video = "data/test/v_PlayingCello_g01_c01.avi"
-output_video = "data/test/v_PlayingCello_g01_c01.mp4"
+input_video = "data/test/v_PlayingCello_g01_c03.avi"
+output_video = "data/test/v_PlayingCello_g01_c03.mp4"
 
 cap = cv2.VideoCapture(input_video)
 

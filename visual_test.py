@@ -1,25 +1,29 @@
-import os
 import cv2
 from src.inference import predict_video
+from src.hf_description_generator import generate_description
 
-# ---------------- CONFIG ----------------
-video_path = "data/test/v_PlayingCello_g01_c01.mp4"
-# --------------------------------------
+video_path = "data/test/v_PlayingCello_g01_c03.mp4"
 
 print("Using video path:", video_path)
 
-# ---- PREDICTION ----
+# ---- STEP 1: Prediction ----
 label, confidence = predict_video(video_path)
-print("Prediction:", label, "Confidence:", confidence)
 
-# ---- VISUAL DEMO ----
+print("Prediction:", label)
+print("Confidence:", confidence)
+
+# ---- STEP 2: Open video FIRST ----
 cap = cv2.VideoCapture(video_path)
 
 if not cap.isOpened():
     print("❌ Video file open nahi ho rahi")
     exit()
 
-window_name = "Action Recognition Demo"
+# ---- STEP 3: Generate description (safe) ----
+description = generate_description(label, confidence)
+print("Description:", description)
+
+window_name = "Video Action Recognition Demo"
 cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 
 while True:
@@ -27,21 +31,14 @@ while True:
     if not ret:
         break
 
-    text = f"{label} ({confidence:.2f})"
+    cv2.putText(frame, f"Action: {label} ({confidence:.2f})",
+                (30, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
-    cv2.putText(
-        frame,
-        text,
-        (30, 40),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        1,
-        (0, 255, 0),
-        2
-    )
+    cv2.putText(frame, f"Desc: {description}",
+                (30, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
 
     cv2.imshow(window_name, frame)
 
-    # IMPORTANT: window ko alive rakhta hai
     if cv2.waitKey(30) & 0xFF == ord("q"):
         break
 
