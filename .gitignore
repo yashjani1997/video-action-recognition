@@ -17,3 +17,9 @@ data/
 
 # OS
 .DS_Store
+
+# Trained models
+models/
+*.h5
+*.pt
+*.pth
