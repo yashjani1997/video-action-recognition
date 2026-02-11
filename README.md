@@ -32,3 +32,4 @@ UCF-101 (subset) with the following classes:
 
 ## ▶️ Demo
 Local visual demo overlays predicted action and confidence on video playback.
+DEMO LINK :- https://drive.google.com/file/d/14CyVO7UjqGsABzvGAZo046OA9o8Um4p8/view?usp=sharing
