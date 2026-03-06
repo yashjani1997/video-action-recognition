@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Video Action Recognition — CNN + LSTM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #050810;
+      --bg2: #080d1a;
+      --panel: #0b1120;
+      --border: #1a2a4a;
+      --accent: #00e5ff;
+      --accent2: #7c3aed;
+      --accent3: #10b981;
+      --red: #ef4444;
+      --text: #c8d8f0;
+      --muted: #4a6080;
+      --mono: 'Share Tech Mono', monospace;
+      --display: 'Orbitron', sans-serif;
+      --body: 'Rajdhani', sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--body);
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Scanline overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,229,255,0.015) 2px,
+        rgba(0,229,255,0.015) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* Grid background */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 48px;
+      background: rgba(5,8,16,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+    }
+
+    .nav-logo span { color: var(--muted); }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--accent); }
+
+    .nav-cta {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--bg);
+      background: var(--accent);
+      padding: 7px 18px;
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      transition: opacity 0.2s;
+    }
+
+    .nav-cta:hover { opacity: 0.8; }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 120px 48px 80px;
+      text-align: center;
+    }
+
+    .hero-tag {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      opacity: 0;
+      animation: fadeUp 0.6s 0.2s forwards;
+    }
+
+    .hero-tag::before { content: '// '; color: var(--muted); }
+
+    .hero h1 {
+      font-family: var(--display);
+      font-size: clamp(36px, 7vw, 88px);
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      color: #fff;
+      margin-bottom: 16px;
+      opacity: 0;
+      animation: fadeUp 0.7s 0.35s forwards;
+    }
+
+    .hero h1 .cyan { color: var(--accent); }
+    .hero h1 .purple { color: #a78bfa; }
+
+    .hero-sub {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      margin-bottom: 40px;
+      opacity: 0;
+      animation: fadeUp 0.7s 0.5s forwards;
+    }
+
+    .hero-desc {
+      max-width: 640px;
+      font-size: 18px;
+      color: var(--text);
+      margin-bottom: 48px;
+      opacity: 0;
+      animation: fadeUp 0.7s 0.6s forwards;
+      font-weight: 400;
+    }
+
+    .hero-btns {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: fadeUp 0.7s 0.75s forwards;
+    }
+
+    .btn-primary {
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 14px 32px;
+      background: var(--accent);
+      color: var(--bg);
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.15);
+      transform: translateX(-100%);
+      transition: transform 0.3s;
+    }
+
+    .btn-primary:hover::after { transform: translateX(0); }
+
+    .btn-outline {
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 14px 32px;
+      border: 1px solid var(--border);
+      color: var(--text);
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      transition: all 0.2s;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Stats row */
+    .hero-stats {
+      display: flex;
+      gap: 48px;
+      justify-content: center;
+      margin-top: 72px;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: fadeUp 0.7s 0.9s forwards;
+    }
+
+    .stat {
+      text-align: center;
+      border-left: 2px solid var(--accent);
+      padding-left: 16px;
+    }
+
+    .stat-val {
+      font-family: var(--display);
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .stat-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* ── SECTIONS ── */
+    section {
+      position: relative;
+      z-index: 1;
+      padding: 100px 48px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-tag {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .section-tag .num { color: var(--accent); }
+
+    .section-title {
+      font-family: var(--display);
+      font-size: clamp(24px, 4vw, 42px);
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 48px;
+      letter-spacing: -0.01em;
+    }
+
+    /* ── PIPELINE ── */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin-bottom: 64px;
+    }
+
+    .pipe-step {
+      flex: 1;
+      min-width: 120px;
+      text-align: center;
+      padding: 24px 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      position: relative;
+      transition: all 0.3s;
+    }
+
+    .pipe-step:hover {
+      border-color: var(--accent);
+      background: rgba(0,229,255,0.05);
+    }
+
+    .pipe-icon {
+      font-size: 28px;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .pipe-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--accent);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .pipe-arrow {
+      width: 32px;
+      text-align: center;
+      color: var(--accent);
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    /* Alerts */
+    .alert-boxes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .alert-box {
+      padding: 28px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .alert-box.action {
+      border-color: var(--accent3);
+      background: rgba(16,185,129,0.05);
+    }
+
+    .alert-box.miss {
+      border-color: var(--red);
+      background: rgba(239,68,68,0.05);
+    }
+
+    .alert-header {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .alert-box.action .alert-header { color: var(--accent3); }
+    .alert-box.miss .alert-header { color: var(--red); }
+
+    .alert-box p {
+      font-size: 15px;
+      color: var(--text);
+      font-weight: 400;
+    }
+
+    /* ── MODEL CARDS ── */
+    .model-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .model-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 32px;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .model-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+    }
+
+    .model-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .model-name {
+      font-family: var(--display);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 6px;
+      letter-spacing: 0.05em;
+    }
+
+    .model-full {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 24px;
+      letter-spacing: 0.08em;
+    }
+
+    .model-rows { border-top: 1px solid var(--border); }
+
+    .model-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(26,42,74,0.5);
+      font-size: 14px;
+    }
+
+    .model-row .key {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .model-row .val {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    /* ── RESULTS TABLE ── */
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    .results-table th {
+      text-align: left;
+      padding: 14px 20px;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .results-table td {
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(26,42,74,0.4);
+      color: var(--text);
+    }
+
+    .results-table tr:hover td { background: rgba(0,229,255,0.03); }
+
+    .results-table .highlight td { color: var(--accent); }
+
+    .bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .bar {
+      height: 4px;
+      background: var(--border);
+      flex: 1;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 2px;
+      transition: width 1s ease;
+    }
+
+    .badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 3px 8px;
+      letter-spacing: 0.08em;
+    }
+
+    .badge-green { background: rgba(16,185,129,0.15); color: var(--accent3); }
+    .badge-blue  { background: rgba(0,229,255,0.12); color: var(--accent); }
+    .badge-red   { background: rgba(239,68,68,0.12); color: var(--red); }
+
+    /* ── ARCH DIAGRAM ── */
+    .arch-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .arch-row {
+      display: flex;
+      align-items: stretch;
+    }
+
+    .arch-block {
+      flex: 1;
+      padding: 20px 24px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      transition: all 0.3s;
+    }
+
+    .arch-block:hover {
+      border-color: var(--accent);
+      background: rgba(0,229,255,0.04);
+    }
+
+    .arch-block-name {
+      font-family: var(--display);
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .arch-block-desc {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .arch-shape {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    .arch-params {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .arch-connector {
+      display: flex;
+      justify-content: center;
+      padding: 6px 0;
+      color: var(--accent);
+      font-size: 14px;
+    }
+
+    /* ── TECH STACK ── */
+    .stack-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+    }
+
+    .stack-item {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: all 0.3s;
+      cursor: default;
+    }
+
+    .stack-item:hover {
+      border-color: var(--accent);
+      background: rgba(0,229,255,0.04);
+    }
+
+    .stack-icon { font-size: 24px; }
+
+    .stack-name {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+
+    .stack-cat {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* ── DEMO ── */
+    .demo-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 64px 48px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .demo-box::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(0,229,255,0.06) 0%, transparent 70%);
+    }
+
+    .demo-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .demo-title {
+      font-family: var(--display);
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 24px;
+    }
+
+    .demo-desc {
+      font-size: 15px;
+      color: var(--muted);
+      max-width: 480px;
+      margin: 0 auto 36px;
+    }
+
+    .demo-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--mono);
+      font-size: 14px;
+      padding: 16px 36px;
+      background: var(--accent);
+      color: var(--bg);
+      text-decoration: none;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      transition: opacity 0.2s;
+    }
+
+    .demo-btn:hover { opacity: 0.85; }
+
+    /* ── LIMITATIONS ── */
+    .limit-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .limit-item {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--red);
+      padding: 20px 24px;
+      font-size: 15px;
+      color: var(--text);
+    }
+
+    .limit-item::before {
+      content: '⚠ ';
+      font-size: 14px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: gap;
+    }
+
+    .footer-logo {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.1em;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--accent); }
+
+    /* ── DIVIDER ── */
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 0 48px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s, transform 0.6s;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: none;
+    }
+
+    /* Accuracy ring */
+    .accuracy-ring {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: conic-gradient(var(--accent) 0% 87%, var(--border) 87% 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 32px;
+      position: relative;
+    }
+
+    .accuracy-ring::before {
+      content: '';
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: var(--panel);
+      position: absolute;
+    }
+
+    .accuracy-val {
+      font-family: var(--display);
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--accent);
+      position: relative;
+      z-index: 1;
+    }
+
+    @media (max-width: 768px) {
+      nav { padding: 14px 24px; }
+      .nav-links { display: none; }
+      section { padding: 64px 24px; }
+      .pipeline { flex-direction: column; }
+      .pipe-arrow { transform: rotate(90deg); }
+      .model-grid { grid-template-columns: 1fr; }
+      .alert-boxes { grid-template-columns: 1fr; }
+      .limit-list { grid-template-columns: 1fr; }
+      footer { padding: 32px 24px; flex-direction: column; gap: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">[ <span>VIDEO_</span>ACTION_RECOG ]</div>
+  <ul class="nav-links">
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#pipeline">Pipeline</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#results">Results</a></li>
+    <li><a href="#demo">Demo</a></li>
+    <li><a href="https://github.com/yashjani1997" target="_blank">GitHub</a></li>
+  </ul>
+  <a href="https://drive.google.com/file/d/14CyVO7UjqGsABzvGAZo046OA9o8Um4p8/view?usp=sharing" class="nav-cta" target="_blank">▶ WATCH DEMO</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero" id="overview">
+  <p class="hero-tag">Computer Vision · Deep Learning · Temporal Modeling</p>
+  <h1>VIDEO <span class="cyan">ACTION</span><br><span class="purple">RECOGNITION</span></h1>
+  <p class="hero-sub">// CNN + LSTM Hybrid Architecture — UCF-101 Dataset</p>
+  <p class="hero-desc">
+    An end-to-end deep learning system that extracts spatial features via MobileNetV2 and learns temporal patterns via LSTM — predicting human actions from raw video with live overlay output.
+  </p>
+  <div class="hero-btns">
+    <a href="https://drive.google.com/file/d/14CyVO7UjqGsABzvGAZo046OA9o8Um4p8/view?usp=sharing" class="btn-primary" target="_blank">▶ Watch Demo</a>
+    <a href="https://github.com/yashjani1997" class="btn-outline" target="_blank">View Source</a>
+  </div>
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-val">~87%</div>
+      <div class="stat-label">Overall Accuracy</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">5</div>
+      <div class="stat-label">Action Classes</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">16</div>
+      <div class="stat-label">Frames / Video</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">3.8M</div>
+      <div class="stat-label">Parameters</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- PIPELINE -->
+<section id="pipeline">
+  <div class="section-tag"><span class="num">// 01 —</span> Recognition Pipeline</div>
+  <h2 class="section-title">Detection Pipeline</h2>
+
+  <div class="pipeline reveal">
+    <div class="pipe-step">
+      <span class="pipe-icon">🎥</span>
+      <div class="pipe-label">VIDEO INPUT</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <span class="pipe-icon">🖼️</span>
+      <div class="pipe-label">FRAME EXTRACT</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <span class="pipe-icon">🔬</span>
+      <div class="pipe-label">CNN FEATURES</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <span class="pipe-icon">🧠</span>
+      <div class="pipe-label">LSTM TEMPORAL</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <span class="pipe-icon">🎯</span>
+      <div class="pipe-label">ACTION LABEL</div>
+    </div>
+  </div>
+
+  <div class="alert-boxes reveal">
+    <div class="alert-box action">
+      <div class="alert-header">✅ ACTION RECOGNIZED</div>
+      <p>Green bounding box displayed. Action label shown with confidence score as overlay. System continues processing the video stream.</p>
+    </div>
+    <div class="alert-box miss">
+      <div class="alert-header">⚡ LIVE INFERENCE</div>
+      <p>Predicted action class + confidence % overlaid directly on video playback using OpenCV. Real-time visual feedback for every processed clip.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <div class="section-tag"><span class="num">// 02 —</span> Model Architecture</div>
+  <h2 class="section-title">Model Architecture</h2>
+
+  <div class="model-grid reveal">
+    <div class="model-card">
+      <div class="model-name">CNN BACKBONE</div>
+      <div class="model-full">MobileNetV2 — ImageNet Pretrained</div>
+      <div class="model-rows">
+        <div class="model-row">
+          <span class="key">Architecture</span>
+          <span class="val">MobileNetV2</span>
+        </div>
+        <div class="model-row">
+          <span class="key">Wrapper</span>
+          <span class="val">TimeDistributed</span>
+        </div>
+        <div class="model-row">
+          <span class="key">Input Frame</span>
+          <span class="val">112 × 112 × 3</span>
+        </div>
+        <div class="model-row">
+          <span class="key">Output / Frame</span>
+          <span class="val">256-dim vector</span>
+        </div>
+        <div class="model-row">
+          <span class="key">Backbone Params</span>
+          <span class="val">2.26M (frozen)</span>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <span class="badge badge-green">PRETRAINED</span>&nbsp;
+        <span class="badge badge-blue">FROZEN WEIGHTS</span>
+      </div>
+    </div>
+
+    <div class="model-card">
+      <div class="model-name">LSTM TEMPORAL</div>
+      <div class="model-full">Long Short-Term Memory — Sequence Modeling</div>
+      <div class="model-rows">
+        <div class="model-row">
+          <span class="key">Units</span>
+          <span class="val">128</span>
+        </div>
+        <div class="model-row">
+          <span class="key">Input Sequence</span>
+          <span class="val">16 × 256</span>
+        </div>
+        <div class="model-row">
+          <span class="key">Output</span>
+          <span class="val">128-dim vector</span>
+        </div>
+        <div class="model-row">
+          <span class="key">Dropout</span>
+          <span class="val">Applied</span>
+        </div>
+        <div class="model-row">
+          <span class="key">Head</span>
+          <span class="val">Dense Softmax (5)</span>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <span class="badge badge-blue">TRAINABLE</span>&nbsp;
+        <span class="badge badge-green">197K PARAMS</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layer flow -->
+  <div style="margin-top:40px">
+    <div class="arch-flow reveal">
+      <div class="arch-row">
+        <div class="arch-block">
+          <div>
+            <div class="arch-block-name">Input Layer</div>
+            <div class="arch-block-desc">Raw video frames batch</div>
+          </div>
+          <span class="arch-shape">(None, 16, 112, 112, 3)</span>
+          <span class="arch-params">0 params</span>
+        </div>
+      </div>
+      <div class="arch-connector">↓</div>
+      <div class="arch-row">
+        <div class="arch-block">
+          <div>
+            <div class="arch-block-name">TimeDistributed (MobileNetV2)</div>
+            <div class="arch-block-desc">Spatial feature extraction per frame</div>
+          </div>
+          <span class="arch-shape">(None, 16, 256)</span>
+          <span class="arch-params">2,585,920</span>
+        </div>
+      </div>
+      <div class="arch-connector">↓</div>
+      <div class="arch-row">
+        <div class="arch-block">
+          <div>
+            <div class="arch-block-name">LSTM (128 units)</div>
+            <div class="arch-block-desc">Temporal sequence modeling</div>
+          </div>
+          <span class="arch-shape">(None, 128)</span>
+          <span class="arch-params">197,120</span>
+        </div>
+      </div>
+      <div class="arch-connector">↓</div>
+      <div class="arch-row">
+        <div class="arch-block">
+          <div>
+            <div class="arch-block-name">Dropout + Dense Softmax</div>
+            <div class="arch-block-desc">Regularization → class probabilities</div>
+          </div>
+          <span class="arch-shape">(None, 5)</span>
+          <span class="arch-params">645</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- RESULTS -->
+<section id="results">
+  <div class="section-tag"><span class="num">// 03 —</span> Performance</div>
+  <h2 class="section-title">Results</h2>
+
+  <div class="accuracy-ring reveal">
+    <div class="accuracy-val">87%</div>
+  </div>
+
+  <table class="results-table reveal">
+    <thead>
+      <tr>
+        <th>Class</th>
+        <th>Precision</th>
+        <th>Recall</th>
+        <th>F1-Score</th>
+        <th>F1 Bar</th>
+        <th>Note</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>CricketShot</td>
+        <td>0.71</td>
+        <td>0.82</td>
+        <td>0.76</td>
+        <td><div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:76%"></div></div>76%</div></td>
+        <td><span class="badge badge-red">Motion overlap</span></td>
+      </tr>
+      <tr>
+        <td>PlayingCello</td>
+        <td>0.91</td>
+        <td>0.95</td>
+        <td>0.93</td>
+        <td><div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:93%"></div></div>93%</div></td>
+        <td><span class="badge badge-green">Strong</span></td>
+      </tr>
+      <tr>
+        <td>Punch</td>
+        <td>0.88</td>
+        <td>0.97</td>
+        <td>0.93</td>
+        <td><div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:93%"></div></div>93%</div></td>
+        <td><span class="badge badge-green">Top Recall</span></td>
+      </tr>
+      <tr>
+        <td>ShavingBeard</td>
+        <td>1.00</td>
+        <td>0.91</td>
+        <td>0.95</td>
+        <td><div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:95%"></div></div>95%</div></td>
+        <td><span class="badge badge-blue">Perfect Precision</span></td>
+      </tr>
+      <tr>
+        <td>TennisSwing</td>
+        <td>0.88</td>
+        <td>0.71</td>
+        <td>0.79</td>
+        <td><div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:79%"></div></div>79%</div></td>
+        <td><span class="badge badge-red">Motion overlap</span></td>
+      </tr>
+      <tr class="highlight">
+        <td><strong>Weighted Avg</strong></td>
+        <td><strong>0.87</strong></td>
+        <td><strong>0.87</strong></td>
+        <td><strong>0.87</strong></td>
+        <td><div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:87%"></div></div>87%</div></td>
+        <td><span class="badge badge-blue">Overall</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="divider"></div>
+
+<!-- TECH STACK -->
+<section>
+  <div class="section-tag"><span class="num">// 04 —</span> Stack</div>
+  <h2 class="section-title">Tech Stack</h2>
+  <div class="stack-grid reveal">
+    <div class="stack-item">
+      <span class="stack-icon">🐍</span>
+      <div>
+        <div class="stack-name">Python</div>
+        <div class="stack-cat">Core Language</div>
+      </div>
+    </div>
+    <div class="stack-item">
+      <span class="stack-icon">🧬</span>
+      <div>
+        <div class="stack-name">TensorFlow / Keras</div>
+        <div class="stack-cat">Deep Learning</div>
+      </div>
+    </div>
+    <div class="stack-item">
+      <span class="stack-icon">📱</span>
+      <div>
+        <div class="stack-name">MobileNetV2</div>
+        <div class="stack-cat">CNN Backbone</div>
+      </div>
+    </div>
+    <div class="stack-item">
+      <span class="stack-icon">👁️</span>
+      <div>
+        <div class="stack-name">OpenCV</div>
+        <div class="stack-cat">Video Processing</div>
+      </div>
+    </div>
+    <div class="stack-item">
+      <span class="stack-icon">🔢</span>
+      <div>
+        <div class="stack-name">NumPy</div>
+        <div class="stack-cat">Array Operations</div>
+      </div>
+    </div>
+    <div class="stack-item">
+      <span class="stack-icon">🐼</span>
+      <div>
+        <div class="stack-name">Pandas</div>
+        <div class="stack-cat">Data Management</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- DEMO -->
+<section id="demo">
+  <div class="section-tag"><span class="num">// 05 —</span> Demo</div>
+  <h2 class="section-title">Live Demo</h2>
+  <div class="demo-box reveal">
+    <p class="demo-label">// Real-time action recognition — Frame extraction → CNN → LSTM → Overlay</p>
+    <h3 class="demo-title">Watch It In Action</h3>
+    <p class="demo-desc">See the CNN + LSTM pipeline classify human actions in real-time with confidence score overlaid on video playback.</p>
+    <a href="https://drive.google.com/file/d/14CyVO7UjqGsABzvGAZo046OA9o8Um4p8/view?usp=sharing" class="demo-btn" target="_blank">
+      ▶ WATCH DEMO VIDEO
+    </a>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- LIMITATIONS -->
+<section>
+  <div class="section-tag"><span class="num">// 06 —</span> Limitations</div>
+  <h2 class="section-title">Known Limitations</h2>
+  <div class="limit-list reveal">
+    <div class="limit-item">Trained on 5 classes only — UCF-101 has 101 total action categories</div>
+    <div class="limit-item">Small dataset subset — performance may vary on unseen action types</div>
+    <div class="limit-item">Fixed 16-frame window may miss context in longer action sequences</div>
+    <div class="limit-item">CricketShot & TennisSwing share motion overlap — harder to distinguish</div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">[ VIDEO_ACTION_RECOG ]</div>
+  <div class="footer-links">
+    <a href="https://github.com/yashjani1997" target="_blank">GitHub</a>
+    <a href="https://github.com/yashjani1997" target="_blank">Portfolio</a>
+  </div>
+</footer>
+
+<script>
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+  reveals.forEach(r => observer.observe(r));
+</script>
+</body>
+</html>
