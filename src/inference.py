@@ -4,7 +4,7 @@ import tensorflow as tf
 from src.dataset import extract_frames
 import os
 
-MODEL_PATH = "models/action_recognition_final.keras"
+MODEL_PATH = "models/action_recognition_final.h5"
 
 ID2LABEL = {
     0: "CricketShot",
