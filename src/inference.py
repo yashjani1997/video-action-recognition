@@ -14,19 +14,25 @@ ID2LABEL = {
     4: "TennisSwing"
 }
 
-# ✅ Lazy loading — model sirf tab load hoga jab predict_video call ho
 _model = None
+
+# ✅ Patch for Keras 2 vs Keras 3 'batch_shape' mismatch
+class FixedInputLayer(tf.keras.layers.InputLayer):
+    def __init__(self, **kwargs):
+        if 'batch_shape' in kwargs:
+            kwargs['shape'] = kwargs.pop('batch_shape')[1:]
+        super().__init__(**kwargs)
 
 def get_model():
     global _model
     if _model is None:
         if not os.path.exists(MODEL_PATH):
-            raise FileNotFoundError(
-                f"❌ Model file nahi mila: '{MODEL_PATH}'\n"
-                f"Apne GitHub repo mein 'models/' folder mein "
-                f"'action_recognition_final.keras' file daalo."
-            )
-        _model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+            raise FileNotFoundError(f"Model not found: {MODEL_PATH}")
+        _model = tf.keras.models.load_model(
+            MODEL_PATH,
+            compile=False,
+            custom_objects={'InputLayer': FixedInputLayer}
+        )
     return _model
 
 
@@ -34,8 +40,6 @@ def predict_video(video_path):
     model = get_model()
     frames = extract_frames(video_path)
     frames = np.expand_dims(frames, axis=0)
-
     preds = model.predict(frames)
     class_id = np.argmax(preds)
-
     return ID2LABEL[class_id], float(np.max(preds))
