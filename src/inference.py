@@ -3,8 +3,9 @@ import numpy as np
 import tensorflow as tf
 from src.dataset import extract_frames
 import os
+import pickle
 
-MODEL_PATH = "models/action_recognition_final.h5"
+WEIGHTS_PATH = "models/model_weights.pkl"
 
 ID2LABEL = {
     0: "CricketShot",
@@ -16,25 +17,41 @@ ID2LABEL = {
 
 _model = None
 
-# ✅ Patch for Keras 2 vs Keras 3 'batch_shape' mismatch
-class FixedInputLayer(tf.keras.layers.InputLayer):
-    def __init__(self, **kwargs):
-        if 'batch_shape' in kwargs:
-            kwargs['shape'] = kwargs.pop('batch_shape')[1:]
-        super().__init__(**kwargs)
+def build_model():
+    base_cnn = tf.keras.applications.MobileNetV2(
+        input_shape=(112, 112, 3),
+        include_top=False,
+        weights=None,
+        pooling="avg"
+    )
+    base_cnn.trainable = False
+    inputs = tf.keras.Input(shape=(16, 112, 112, 3))
+    x = tf.keras.layers.TimeDistributed(base_cnn)(inputs)
+    x = tf.keras.layers.LSTM(128)(x)
+    x = tf.keras.layers.Dropout(0.3)(x)
+    outputs = tf.keras.layers.Dense(5, activation="softmax")(x)
+    return tf.keras.Model(inputs, outputs)
 
 def get_model():
     global _model
     if _model is None:
-        if not os.path.exists(MODEL_PATH):
-            raise FileNotFoundError(f"Model not found: {MODEL_PATH}")
-        _model = tf.keras.models.load_model(
-            MODEL_PATH,
-            compile=False,
-            custom_objects={'InputLayer': FixedInputLayer}
-        )
-    return _model
+        if not os.path.exists(WEIGHTS_PATH):
+            raise FileNotFoundError(f"Weights not found: {WEIGHTS_PATH}")
 
+        model = build_model()
+
+        # Dummy pass to build all layers
+        dummy = np.zeros((1, 16, 112, 112, 3), dtype=np.float32)
+        model(dummy, training=False)
+
+        # Load weights from pickle
+        with open(WEIGHTS_PATH, "rb") as f:
+            weights = pickle.load(f)
+
+        model.set_weights(weights)
+        _model = model
+        print("✅ Model loaded!")
+    return _model
 
 def predict_video(video_path):
     model = get_model()
