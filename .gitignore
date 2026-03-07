@@ -18,6 +18,3 @@ data/
 # OS
 .DS_Store
 
-# Trained models
-*.pt
-*.pth
